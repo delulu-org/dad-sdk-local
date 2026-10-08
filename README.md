@@ -10,7 +10,7 @@ cargo install --path crates/dad-local-cli
 > **Local addons are native binaries.** Delulu spawns them as child
 > processes and talks to them over newline-delimited JSON-RPC on stdio
 > (`protocol_version: "2.0"`). For HTTP addons use
-> [`@delulu-addon/dad-sdk`](../dad_sdk) instead.
+> [`@delulu-addon/dad-sdk`](https://github.com/delulu-org/dad-sdk) instead.
 
 ---
 

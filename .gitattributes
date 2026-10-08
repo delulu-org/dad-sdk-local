@@ -1,0 +1,5 @@
+# One line ending for every file, on every machine: LF.
+#
+# Windows, macOS, and Linux all read LF, so a checkout never rewrites the
+# working tree and git never reports a whole-file diff on a platform switch.
+* text=auto eol=lf
