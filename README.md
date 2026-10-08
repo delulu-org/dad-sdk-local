@@ -192,7 +192,6 @@ definition time is a compile error here, enforced in both directions.
 | `platform_assets` | yes | At least one `{os}-{arch}` entry (see [Platforms](#platforms)) |
 | `description`, `publisher` | no | Listing shelf text |
 | `logo`, `homepage_url`, `release_notes_url` | no | HTTPS when set |
-| `min_app_version` | no | Strict semver of the host this addon accepts |
 | `api_key` | no | `{ required, page_url }` (see below) |
 | `signature` | no | `""` while authoring; the publisher tool fills it |
 

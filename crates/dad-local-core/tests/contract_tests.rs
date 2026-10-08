@@ -15,7 +15,6 @@ fn valid_manifest() -> Value {
         "description": "Subtitle tracks from OpenSubtitles using your own free API key.",
         "publisher": "Delulu Core Team",
         "capabilities": ["subtitle"],
-        "min_app_version": "1.2.0",
         "api_key": {
             "required": true,
             "page_url": "https://www.opensubtitles.com/en/users/new_api_key"

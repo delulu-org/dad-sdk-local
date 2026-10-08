@@ -149,9 +149,6 @@ pub struct LocalAddonManifest {
     /// Declared capabilities; every one must have its handler (compile-time
     /// in the runtime crate) and no capability may be declared twice.
     pub capabilities: Vec<DadCapability>,
-    /// Minimum host (Delulu app) version this addon accepts. Strict semver.
-    #[serde(default)]
-    pub min_app_version: Option<String>,
     /// Optional API key gate.
     #[serde(default)]
     pub api_key: Option<ApiKey>,
@@ -303,15 +300,6 @@ pub fn validate_typed_manifest(manifest: &LocalAddonManifest) -> Validation {
                     cap.as_str()
                 ));
             }
-        }
-    }
-
-    // Host gate.
-    if let Some(min_app) = &m.min_app_version {
-        if !is_valid_version(min_app) {
-            errors.push(format!(
-                "'min_app_version' must be semantic 'major.minor.patch' when set - got '{min_app}'"
-            ));
         }
     }
 
@@ -485,10 +473,6 @@ mod tests {
         let mut m = minimal_manifest();
         m["api_key"] = json!({ "required": true, "page_url": "http://nope.example.com" });
         assert!(!validate_manifest(&m).valid);
-
-        let mut m = minimal_manifest();
-        m["min_app_version"] = json!("1.2");
-        assert!(!validate_manifest(&m).valid);
     }
 
     #[test]
@@ -528,7 +512,7 @@ mod tests {
         let text = String::from_utf8(a).unwrap();
         let keys: Vec<&str> = [
             "api_key", "capabilities", "description", "homepage_url", "id", "logo",
-            "min_app_version", "name", "platform_assets", "protocol_version", "publisher",
+            "name", "platform_assets", "protocol_version", "publisher",
             "release_notes_url", "type", "version",
         ]
         .into_iter()
