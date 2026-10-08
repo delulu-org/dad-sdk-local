@@ -1,0 +1,21 @@
+[package]
+name = "dad-local-macros"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Delulu Core Team"]
+description = "define_local_addon! — compile-time manifest validation and capability-gated handler bounds for DAD local addons."
+
+[lib]
+proc-macro = true
+
+[dependencies]
+dad-local-core = { path = "../dad-local-core" }
+serde_json = "1"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", default-features = false, features = ["derive", "parsing", "printing", "clone-impls", "proc-macro"] }
+
+[dev-dependencies]
+dad-local-toolchain = { path = "../dad-local-toolchain" }
+

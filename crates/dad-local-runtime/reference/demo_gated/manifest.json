@@ -1,0 +1,23 @@
+{
+  "id": "org.example.demo-gated",
+  "name": "Demo Gated",
+  "version": "0.1.0",
+  "type": "local",
+  "protocol_version": "2.0",
+  "description": "M1 conformance addon - api_key.required gate enforcement.",
+  "publisher": "Delulu Core Team",
+  "capabilities": ["subtitle"],
+  "api_key": {
+    "required": true,
+    "page_url": "https://example.com/get-a-demo-key"
+  },
+  "platform_assets": {
+    "windows-x64": {
+      "download_url": "https://example.com/demo-gated.exe",
+      "binary_name": "demo-gated.exe",
+      "sha256": "",
+      "entry_command": "rpc"
+    }
+  },
+  "signature": ""
+}

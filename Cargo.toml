@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crates/dad-local-core", "crates/dad-local-toolchain", "crates/dad-local-macros", "crates/dad-local-runtime", "crates/dad-local-cli"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+authors = ["Delulu Core Team"]
+repository = "https://github.com/delulu-org/dad-sdk-local"
+
+# The mandated release profile. `dad-local build` (M2) refuses to ship unless
+# the addon's Cargo.toml matches this exact shape — fastest Rust, enforced.
+# panic stays `unwind` (the default) on purpose: the runtime's RPC loop catches
+# handler panics and answers `internal_error`; `panic = "abort"` would break
+# that contract guarantee, so it is a build-rejection condition, not an option.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

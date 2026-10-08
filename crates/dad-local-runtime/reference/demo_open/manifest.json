@@ -1,0 +1,19 @@
+{
+  "id": "org.example.demo-open",
+  "name": "Demo Open",
+  "version": "0.1.0",
+  "type": "local",
+  "protocol_version": "2.0",
+  "description": "M1 conformance addon - direct_stream + torrent + meta, no key gate.",
+  "publisher": "Delulu Core Team",
+  "capabilities": ["direct_stream", "torrent", "meta"],
+  "platform_assets": {
+    "windows-x64": {
+      "download_url": "https://example.com/demo-open.exe",
+      "binary_name": "demo-open.exe",
+      "sha256": "",
+      "entry_command": "rpc"
+    }
+  },
+  "signature": ""
+}

@@ -1,0 +1,19 @@
+[package]
+name = "dad-local-cli"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Delulu Core Team"]
+description = "dad-local — the DAD local addon building kit: init, build, dev, test, validate. A building kit, nothing more."
+
+[[bin]]
+name = "dad-local"
+path = "src/main.rs"
+
+[dependencies]
+dad-local-core = { path = "../dad-local-core" }
+dad-local-toolchain = { path = "../dad-local-toolchain" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"

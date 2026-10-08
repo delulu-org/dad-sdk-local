@@ -1,0 +1,9 @@
+[package]
+name = "dad-local-toolchain"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Delulu Core Team"]
+description = "Drives cargo through this machine's real build environment, so the CLI and the SDK's own tests build addons identically."
+
+[dependencies]
