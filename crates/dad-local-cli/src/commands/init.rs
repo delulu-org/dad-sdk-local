@@ -249,7 +249,7 @@ process and speaks one-shot JSON-RPC over stdio with.
 
 ```bash
 dad-local dev       # debug build + fixture probes, for iteration
-dad-local test      # release build + the full pre-ship conformance gate
+dad-local test      # release build + the full conformance gate
 dad-local validate  # manifest.json schema check
 dad-local build     # enforced release build (profile + portability)
 ```
@@ -261,7 +261,7 @@ dad-local build     # enforced release build (profile + portability)
 Edit `manifest.json` and `src/main.rs` together - the compile-time
 capability check fails the build when they disagree.
 
-## Shipping
+## Building an artifact
 
 `dad-local build` produces the release artifact. Hashing and signing happen
 in the team's separate publisher pipeline - the SDK is a building kit,
@@ -378,7 +378,7 @@ pub fn run(
     println!("\n Next steps:");
     println!("   cd {}", dir.display());
     println!("   dad-local dev        # iterate: debug build + fixture probes");
-    println!("   dad-local test       # pre-ship gate: release build + full probes");
+    println!("   dad-local test       # release gate: release build + full probes");
     println!("   dad-local build      # enforced release build");
     println!();
     Ok(())

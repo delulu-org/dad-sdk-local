@@ -1,4 +1,4 @@
-//! `dad-local test` — the pre-ship gate.
+//! `dad-local test` — the release gate.
 //!
 //! Builds the addon through the enforced release pipeline, then probes every
 //! declared capability against the public-domain fixtures, classifying each

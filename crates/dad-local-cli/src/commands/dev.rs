@@ -68,6 +68,6 @@ pub fn run(dir: Option<&Path>, fixture_count: usize) -> CmdResult<()> {
     }
 
     println!("\n Iterating? Edit src/main.rs and run `dad-local dev` again.");
-    println!(" Ready to ship? `dad-local test` is the pre-ship gate.\n");
+    println!(" Ready? `dad-local test` is the release gate.\n");
     Ok(())
 }

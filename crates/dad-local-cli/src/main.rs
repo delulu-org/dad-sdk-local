@@ -2,7 +2,7 @@
 //!
 //! Author-side tooling, and NOTHING more: scaffold (`init`), build with the
 //! mandated release profile (`build`), iterate against fixture probes
-//! (`dev`), the pre-ship conformance gate (`test`), and manifest schema
+//! (`dev`), the release conformance gate (`test`), and manifest schema
 //! checking (`validate`).
 //!
 //! There is deliberately no `publish` command: signing and publishing belong
@@ -74,7 +74,7 @@ enum Commands {
         #[arg(long, default_value_t = 2)]
         fixtures: usize,
     },
-    /// The pre-ship gate: build release + probe every fixture on every
+    /// The release gate: build release + probe every fixture on every
     /// declared capability with pass/fail verdicts
     Test {
         /// Addon directory (default: current directory)

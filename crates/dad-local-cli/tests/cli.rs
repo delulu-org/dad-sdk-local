@@ -2,7 +2,7 @@
 //!
 //! These drive the real CLI as a subprocess, exactly as a user would: the
 //! fast tests cover scaffolding, validation, argument handling, and error
-//! reporting; one opt-in test (`--ignored`) runs the full pre-ship gate,
+//! reporting; one opt-in test (`--ignored`) runs the full release gate,
 //! which compiles a release binary and so is kept out of the default run.
 
 use std::path::{Path, PathBuf};
@@ -169,7 +169,7 @@ fn verify_current_dir_defaults_to_the_addon() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The complete pre-ship pipeline: scaffold -> `dad-local test` builds a
+/// The complete release pipeline: scaffold -> `dad-local test` builds a
 /// release binary, runs the clippy gate, checks portability, and probes every
 /// fixture. Slow (a full release + LTO build), hence opt-in.
 #[test]
