@@ -1,6 +1,6 @@
 # dad-sdk-local
 
-The **Delulu Addon Development (DAD) Local SDK** - build, test, and ship
+The **Delulu Addon Development (DAD) Local SDK** - develop, build, and test
 local (native binary) addons for Delulu.
 
 ```bash
@@ -11,6 +11,13 @@ cargo install --path crates/dad-local-cli
 > processes and talks to them over newline-delimited JSON-RPC on stdio
 > (`protocol_version: "2.0"`). For HTTP addons use
 > [`@delulu-addon/dad-sdk`](https://github.com/delulu-org/dad-sdk) instead.
+
+> **Local addons are not open for public publishing.** They execute inside
+> the user's own client, so Delulu Core code-signs and verifies every local
+> addon before it installs or loads it - only audited, signed, whitelisted
+> addons reach users, and there is no third-party submission path to the
+> public registry. This SDK is published for inspection, reference, and
+> security auditing.
 
 ---
 
@@ -211,7 +218,7 @@ validates the key itself - it only checks that one was delivered.
 
 ---
 
-## Shipping an addon
+## Building an artifact
 
 ```bash
 dad-local build
@@ -221,7 +228,9 @@ The build ends with the artifact path. Hashing and signing stay outside the
 SDK: publishing is done by Delulu's internal publisher tool, which pins the
 artifact's SHA-256 into `platform_assets[...].sha256` and signs the canonical
 manifest payload (the typed manifest, sorted keys, `signature` excluded)
-with the team's key. This SDK has no `publish` command by design.
+with the team's key. This SDK has no `publish` command by design, because
+Delulu Core installs only verified, signed, whitelisted releases - there is
+no public local-addon distribution path.
 
 There are two legal manifest states - *authoring* (`sha256` and
 `signature` are `""`) and *release* (both filled). Delulu installs only
@@ -237,7 +246,7 @@ release state.
 | `dad-local validate [dir]` | Check `manifest.json` against the contract |
 | `dad-local build [dir]` | Mandated profile check, clippy gate, portability check, `--release` build |
 | `dad-local dev [dir]` | Debug build plus fixture probes, for iteration (`--fixtures N`) |
-| `dad-local test [dir]` | The pre-ship gate: release build with the clippy gate, every fixture x every capability (`--key` to test the authenticated path) |
+| `dad-local test [dir]` | The release gate: release build with the clippy gate, every fixture x every capability (`--key` to test the authenticated path) |
 
 Common flags: `--target <triple>` builds for a specific target,
 `--skip-clippy` bypasses the lint gate, `--skip-portability` bypasses the
