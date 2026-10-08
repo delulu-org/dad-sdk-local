@@ -191,7 +191,7 @@ definition time is a compile error here, enforced in both directions.
 | `capabilities` | yes | Any of `direct_stream`, `torrent`, `meta`, `subtitle` |
 | `platform_assets` | yes | At least one `{os}-{arch}` entry (see [Platforms](#platforms)) |
 | `description`, `publisher` | no | Listing shelf text |
-| `logo`, `homepage_url`, `release_notes_url` | no | HTTPS when set |
+| `logo` | no | HTTPS when set |
 | `api_key` | no | `{ required, page_url }` (see below) |
 | `signature` | no | `""` while authoring; the publisher tool fills it |
 

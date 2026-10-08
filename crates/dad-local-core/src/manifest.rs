@@ -140,12 +140,6 @@ pub struct LocalAddonManifest {
     /// logo; the manifest itself is never mutated post-signing.
     #[serde(default)]
     pub logo: Option<String>,
-    /// Optional project homepage.
-    #[serde(default)]
-    pub homepage_url: Option<String>,
-    /// Optional release notes URL.
-    #[serde(default)]
-    pub release_notes_url: Option<String>,
     /// Declared capabilities; every one must have its handler (compile-time
     /// in the runtime crate) and no capability may be declared twice.
     pub capabilities: Vec<DadCapability>,
@@ -285,8 +279,6 @@ pub fn validate_typed_manifest(manifest: &LocalAddonManifest) -> Validation {
         }
     }
     optional_https(&m.logo, "logo", &mut errors);
-    optional_https(&m.homepage_url, "homepage_url", &mut errors);
-    optional_https(&m.release_notes_url, "release_notes_url", &mut errors);
 
     // Capabilities: non-empty, no duplicates (validity is type-enforced).
     if m.capabilities.is_empty() {
@@ -511,9 +503,9 @@ mod tests {
         // Keys are sorted; the payload starts with the alphabetically-first key.
         let text = String::from_utf8(a).unwrap();
         let keys: Vec<&str> = [
-            "api_key", "capabilities", "description", "homepage_url", "id", "logo",
+            "api_key", "capabilities", "description", "id", "logo",
             "name", "platform_assets", "protocol_version", "publisher",
-            "release_notes_url", "type", "version",
+            "type", "version",
         ]
         .into_iter()
         .filter(|k| text.contains(format!("\"{k}\"").as_str()))
