@@ -1,6 +1,6 @@
 //! Contract conformance tests — the port of the dad-sdk test suite plus the
 //! local-specific rules. Everything the host's own implementation must agree
-//! with lives here; the M3 golden vectors will be generated from these shapes.
+//! with lives here.
 
 use dad_local_core::*;
 use serde_json::{json, Value};

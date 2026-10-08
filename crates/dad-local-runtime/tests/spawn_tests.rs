@@ -1,7 +1,6 @@
 //! End-to-end spawn tests: build the example addons, spawn them EXACTLY the
 //! way the host will (one JSON request line on stdin, one response line on
-//! stdout), and assert the full protocol behavior. These are the seed of the
-//! M3 golden vectors.
+//! stdout), and assert the full protocol behavior.
 
 use serde_json::{json, Value};
 use std::io::Write;

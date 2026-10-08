@@ -6,7 +6,7 @@
 //! friends are implemented without the `url` or `regex` crates. The trade-off
 //! is documented per function; the host (which may use whatever crates it
 //! likes) should treat these as the CONTRACT definitions and may implement
-//! them more liberally as long as the golden conformance vectors (M3) pass.
+//! them more liberally as long as they agree on the observable contract.
 
 use serde_json::Value;
 use std::fmt;
