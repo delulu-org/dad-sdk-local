@@ -40,7 +40,8 @@
                              // awaited on a current-thread runtime (no Send bound needed)
 
 pub use dad_local_core::{
-    DadError, DadErrorCode, DadRequest, LocalAddonManifest, MetaResponse, StreamItem, SubtitleItem,
+    DadError, DadErrorCode, DadRequest, HealthPong, LocalAddonManifest, MetaResponse, StreamItem,
+    SubtitleItem, validate_health_pong,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -120,8 +121,8 @@ pub mod prelude {
         caps, define_local_addon, log, GetMetaHandler, GetStreamsHandler, GetSubtitlesHandler,
     };
     pub use dad_local_core::{
-        DadError, DadErrorCode, DadRequest, DadStreamType, MediaType, MetaResponse, StreamItem,
-        SubtitleFormat, SubtitleItem,
+        DadError, DadErrorCode, DadRequest, DadStreamType, HealthPong, MediaType, MetaResponse,
+        StreamItem, SubtitleFormat, SubtitleItem,
     };
 }
 

@@ -158,10 +158,31 @@ fn manifest_method_self_reports() {
 #[test]
 fn health_check_answers_ok() {
     let exe = std::env::var("CARGO_BIN_EXE_demo_open").expect("example binary built");
-    let (response, code, _) = run_addon(&exe, &request_line(9, "healthCheck", json!(null)));
-    assert_eq!(code, 0);
-    assert_eq!(response["result"]["ok"], json!(true));
-    assert_eq!(response["result"]["addon_id"], json!("org.example.demo-open"));
+    for method in ["healthCheck", "health", "ping"] {
+        let (response, code, _) = run_addon(&exe, &request_line(9, method, json!(null)));
+        assert_eq!(code, 0);
+        let res = &response["result"];
+        assert_eq!(res["ok"], json!(true));
+        assert_eq!(res["addon_id"], json!("org.example.demo-open"));
+        assert_eq!(res["name"], json!("Demo Open"));
+        assert_eq!(res["version"], json!("0.1.0"));
+        assert!(res.get("protocol_version").is_none(), "protocol_version must be dropped");
+        assert!(dad_local_core::validate_health_pong(res).valid);
+    }
+
+    // Health endpoints are ungated even on an addon requiring an API key
+    let gated_exe = std::env::var("CARGO_BIN_EXE_demo_gated").expect("example binary built");
+    for method in ["healthCheck", "health", "ping"] {
+        let (response, code, _) = run_addon(&gated_exe, &request_line(9, method, json!(null)));
+        assert_eq!(code, 0);
+        let res = &response["result"];
+        assert_eq!(res["ok"], json!(true));
+        assert_eq!(res["addon_id"], json!("org.example.demo-gated"));
+        assert_eq!(res["name"], json!("Demo Gated"));
+        assert_eq!(res["version"], json!("0.1.0"));
+        assert!(res.get("protocol_version").is_none(), "protocol_version must be dropped");
+        assert!(dad_local_core::validate_health_pong(res).valid);
+    }
 }
 
 #[test]

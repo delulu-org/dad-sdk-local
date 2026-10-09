@@ -301,12 +301,11 @@ fn define_local_addon_impl(
                     ::serde_json::from_str::<::serde_json::Value>(__DAD_MANIFEST_JSON)
                         .expect("compile-time-validated manifest re-parses"),
                 ),
-                "healthCheck" => ::std::result::Result::Ok(::serde_json::json!({
+                "healthCheck" | "health" | "ping" => ::std::result::Result::Ok(::serde_json::json!({
                     "ok": true,
                     "addon_id": __manifest.id,
                     "name": __manifest.name,
                     "version": __manifest.version,
-                    "protocol_version": __manifest.protocol_version,
                 })),
                 _ => ::std::result::Result::Err(::dad_local_core::DadError::new(
                     ::dad_local_core::DadErrorCode::NotFound,
@@ -477,6 +476,8 @@ mod tests {
 
         assert!(out.contains("\"manifest\""), "manifest RPC method is unconditional");
         assert!(out.contains("\"healthCheck\""), "healthCheck RPC method is unconditional");
+        assert!(out.contains("\"health\""), "health RPC alias is unconditional");
+        assert!(out.contains("\"ping\""), "ping RPC alias is unconditional");
         assert!(out.contains("fn main"), "the one-shot entry point must be generated");
     }
 }

@@ -25,8 +25,9 @@
 //! which the TS validator let slip.)
 
 use crate::errors::{DadError, DadErrorCode};
-use crate::manifest::DadCapability;
+use crate::manifest::{is_reverse_dns_id, DadCapability};
 use crate::validation::{is_https_url, json_type_name, Validation};
+use crate::version::is_valid_version;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
@@ -838,6 +839,106 @@ pub fn stream_items_to_value(items: &[StreamItem]) -> serde_json::Result<Value> 
     serde_json::to_value(items)
 }
 
+// ============================================================================
+// Health check / Pong contract
+// ============================================================================
+
+/// The universal 4-field health pong payload returned by any addon responding
+/// to a health ping (`healthCheck`, `health`, or `ping`).
+///
+/// Guaranteed to contain exactly these 4 fields across both local and HTTP SDKs.
+/// Health endpoints are unconditionally accessible and never require an API key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HealthPong {
+    /// Always `true` when the addon is alive and responsive.
+    pub ok: bool,
+    /// Canonical reverse-DNS identifier (e.g. `"dev.fearless.rosseta"`).
+    pub addon_id: String,
+    /// Human-readable display name.
+    pub name: String,
+    /// Semver version string (e.g. `"0.1.0"`).
+    pub version: String,
+}
+
+impl HealthPong {
+    /// Creates a new HealthPong from the given addon metadata.
+    pub fn new(
+        addon_id: impl Into<String>,
+        name: impl Into<String>,
+        version: impl Into<String>,
+    ) -> Self {
+        Self {
+            ok: true,
+            addon_id: addon_id.into(),
+            name: name.into(),
+            version: version.into(),
+        }
+    }
+}
+
+/// Validates a raw `Value` against the universal 4-field HealthPong contract.
+pub fn validate_health_pong(raw: &Value) -> Validation {
+    let Some(obj) = raw.as_object() else {
+        return Validation::error(format!(
+            "Health pong response must be an object - got {}",
+            json_type_name(raw)
+        ));
+    };
+
+    let mut errors = Vec::new();
+
+    // Check unknown fields
+    for key in obj.keys() {
+        if !matches!(key.as_str(), "ok" | "addon_id" | "name" | "version") {
+            errors.push(format!("Unknown field in health pong: '{key}'"));
+        }
+    }
+
+    match obj.get("ok") {
+        Some(Value::Bool(true)) => {}
+        Some(Value::Bool(false)) => errors.push("'ok' must be true in a healthy pong response".to_string()),
+        Some(other) => errors.push(format!("'ok' must be boolean true - got {}", json_type_name(other))),
+        None => errors.push("Missing 'ok' field in health pong".to_string()),
+    }
+
+    match obj.get("addon_id") {
+        Some(Value::String(id)) if !id.trim().is_empty() => {
+            if !is_reverse_dns_id(id) {
+                errors.push(format!(
+                    "'addon_id' must be a reverse-DNS identifier (e.g. 'org.example.demo') - got '{id}'"
+                ));
+            }
+        }
+        Some(other) => errors.push(format!("'addon_id' must be a non-empty string - got {}", json_type_name(other))),
+        None => errors.push("Missing 'addon_id' field in health pong".to_string()),
+    }
+
+    match obj.get("name") {
+        Some(Value::String(name)) if !name.trim().is_empty() => {}
+        Some(other) => errors.push(format!("'name' must be a non-empty string - got {}", json_type_name(other))),
+        None => errors.push("Missing 'name' field in health pong".to_string()),
+    }
+
+    match obj.get("version") {
+        Some(Value::String(v)) if !v.trim().is_empty() => {
+            if !is_valid_version(v) {
+                errors.push(format!(
+                    "'version' must be a valid semver string (e.g. '1.0.0') - got '{v}'"
+                ));
+            }
+        }
+        Some(other) => errors.push(format!("'version' must be a non-empty string - got {}", json_type_name(other))),
+        None => errors.push("Missing 'version' field in health pong".to_string()),
+    }
+
+    if errors.is_empty() {
+        Validation::ok()
+    } else {
+        Validation::fail(errors)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1111,4 +1212,66 @@ mod tests {
         assert!(!result.valid);
         assert!(result.errors.iter().any(|e| e.contains("Embedded 'subtitles'")));
     }
+
+    #[test]
+    fn health_pong_contract() {
+        let valid = json!({
+            "ok": true,
+            "addon_id": "dev.fearless.rosseta",
+            "name": "Rosseta",
+            "version": "0.1.0"
+        });
+        assert!(validate_health_pong(&valid).valid);
+
+        let typed = HealthPong::new("dev.fearless.rosseta", "Rosseta", "0.1.0");
+        let raw = serde_json::to_value(&typed).unwrap();
+        assert_eq!(raw, valid);
+        assert!(validate_health_pong(&raw).valid);
+
+        // Extra / legacy fields (e.g. protocol_version) are rejected under strict contract
+        let with_protocol = json!({
+            "ok": true,
+            "addon_id": "dev.fearless.rosseta",
+            "name": "Rosseta",
+            "version": "0.1.0",
+            "protocol_version": "2.0"
+        });
+        assert!(!validate_health_pong(&with_protocol).valid);
+
+        // ok: false is invalid
+        let not_ok = json!({
+            "ok": false,
+            "addon_id": "dev.fearless.rosseta",
+            "name": "Rosseta",
+            "version": "0.1.0"
+        });
+        assert!(!validate_health_pong(&not_ok).valid);
+
+        // Bad addon_id (not reverse-DNS)
+        let bad_id = json!({
+            "ok": true,
+            "addon_id": "rosseta",
+            "name": "Rosseta",
+            "version": "0.1.0"
+        });
+        assert!(!validate_health_pong(&bad_id).valid);
+
+        // Bad version (not semver)
+        let bad_version = json!({
+            "ok": true,
+            "addon_id": "dev.fearless.rosseta",
+            "name": "Rosseta",
+            "version": "v0.1"
+        });
+        assert!(!validate_health_pong(&bad_version).valid);
+
+        // Missing field
+        let missing = json!({
+            "ok": true,
+            "addon_id": "dev.fearless.rosseta",
+            "version": "0.1.0"
+        });
+        assert!(!validate_health_pong(&missing).valid);
+    }
 }
+

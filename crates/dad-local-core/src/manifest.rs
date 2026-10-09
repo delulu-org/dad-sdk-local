@@ -131,20 +131,20 @@ pub struct LocalAddonManifest {
     /// The RPC contract this binary speaks. Must be `"2.0"`.
     pub protocol_version: String,
     /// One line for the listing shelf.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Author or org display name.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub publisher: Option<String>,
     /// HTTPS logo URL. Omitted/empty → the host DISPLAYS the shared default
     /// logo; the manifest itself is never mutated post-signing.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logo: Option<String>,
     /// Declared capabilities; every one must have its handler (compile-time
     /// in the runtime crate) and no capability may be declared twice.
     pub capabilities: Vec<DadCapability>,
     /// Optional API key gate.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api_key: Option<ApiKey>,
     /// Per-platform binaries, keyed `"{os}-{arch}"` (e.g. `windows-x64`).
     /// At least one entry required.
@@ -175,7 +175,7 @@ impl LocalAddonManifest {
     /// Defined as: **the typed manifest serialized to compact JSON, with the
     /// `signature` KEY removed entirely, keys sorted** (`serde_json`'s default
     /// map is a BTreeMap, so serialization is already key-sorted; absent
-    /// optional fields serialize as explicit `null`s).
+    /// optional fields are omitted entirely).
     ///
     /// Both the signer (publish CLI) and every verifier (host) MUST derive
     /// the payload through the typed struct — never from the raw JSON
@@ -197,7 +197,7 @@ impl LocalAddonManifest {
     }
 }
 
-fn is_reverse_dns_id(id: &str) -> bool {
+pub(crate) fn is_reverse_dns_id(id: &str) -> bool {
     let segments: Vec<&str> = id.split('.').collect();
     if segments.len() < 2 {
         return false;
@@ -514,9 +514,9 @@ mod tests {
         sorted.sort_unstable();
         assert_eq!(keys, sorted, "keys must appear in sorted order in {text}");
 
-        // Absent optionals serialize as explicit nulls (contract for signer
+        // Absent optionals are omitted entirely (contract for signer
         // and verifier going through the typed struct).
-        assert!(text.contains("\"description\":null"));
+        assert!(!text.contains("\"description\""));
         assert!(!text.contains("\"signature\""));
     }
 }
