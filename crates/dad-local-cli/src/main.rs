@@ -43,9 +43,6 @@ enum Commands {
         /// Comma-separated capabilities: direct_stream,torrent,meta,subtitle
         #[arg(long, default_value = "direct_stream")]
         caps: String,
-        /// Path to the dad_sdk_local workspace (default: resolved from this binary's build location)
-        #[arg(long)]
-        sdk_path: Option<PathBuf>,
     },
     /// Validate manifest.json against the DAD local contract
     Validate {
@@ -91,8 +88,8 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
     let outcome = match cli.command {
-        Commands::Init { dir, id, name, caps, sdk_path } => {
-            commands::init::run(&dir, id.as_deref(), name.as_deref(), &caps, sdk_path.as_deref())
+        Commands::Init { dir, id, name, caps } => {
+            commands::init::run(&dir, id.as_deref(), name.as_deref(), &caps)
         }
         Commands::Validate { dir } => commands::validate::run(dir.as_deref()),
         Commands::Build { dir, target, skip_portability, skip_clippy } => commands::build::run(

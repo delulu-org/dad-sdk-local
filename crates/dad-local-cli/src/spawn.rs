@@ -34,7 +34,7 @@ pub fn clippy_args() -> &'static [&'static str] {
 /// `cargo clippy` as a hard gate, using [`clippy_args`].
 ///
 /// Only the ADDON crate is linted: the scaffold is its own workspace, so
-/// `dad-local-core` and `dad-local-runtime` are plain path dependencies and
+/// `dad-local-core` and `dad-local-runtime` are external git dependencies and
 /// never reach clippy-driver. The gate cannot fail on SDK-owned code.
 ///
 /// Output is held back on success and printed on failure, so a clean run

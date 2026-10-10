@@ -2,15 +2,18 @@
 
 use super::shared::{host_platform_key, CmdResult};
 use dad_local_core::DadCapability;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+/// The public SDK repo that scaffolded addons depend on, straight from git -
+/// no registry, no local checkout required.
+const SDK_GIT: &str = "https://github.com/delulu-org/dad-sdk-local";
+const SDK_GIT_REF: &str = "v0.1.0";
 
 struct Scaffold {
     dir_name: String,
     id: String,
     name: String,
     capabilities: Vec<DadCapability>,
-    sdk_runtime_path: String,
-    sdk_core_path: String,
 }
 
 /// Generates `src/main.rs` with handler impls for EXACTLY the declared
@@ -215,10 +218,9 @@ license = "MIT"
 [workspace]
 
 [dependencies]
-# TEMPORARY: local path dependencies until the SDK is published (crates.io or
-# git). Once published, replace both lines with version dependencies.
-dad-local-core = {{ path = "{core_path}" }}
-dad-local-runtime = {{ path = "{runtime_path}" }}
+# The SDK, straight from its public git repo and pinned to a release tag.
+dad-local-core = {{ git = "{sdk_git}", tag = "{sdk_ref}" }}
+dad-local-runtime = {{ git = "{sdk_git}", tag = "{sdk_ref}" }}
 serde = "1"
 serde_json = "1"
 tokio = {{ version = "1", default-features = false, features = ["rt", "net", "time", "io-util"] }}
@@ -233,8 +235,8 @@ codegen-units = 1
 strip = true
 "#,
         crate_name = scaffold.dir_name,
-        core_path = scaffold.sdk_core_path,
-        runtime_path = scaffold.sdk_runtime_path,
+        sdk_git = SDK_GIT,
+        sdk_ref = SDK_GIT_REF,
     )
 }
 
@@ -290,7 +292,6 @@ pub fn run(
     id: Option<&str>,
     name: Option<&str>,
     caps: &str,
-    sdk_path: Option<&Path>,
 ) -> CmdResult<()> {
     let dir_name = dir
         .file_name()
@@ -323,34 +324,11 @@ pub fn run(
         ),
     };
 
-    // SDK paths for the path-dependencies: --sdk-path wins, else resolve from
-    // this binary's build location (works for local development builds).
-    let sdk_root: PathBuf = match sdk_path {
-        Some(p) => p.to_path_buf(),
-        None => Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .and_then(Path::parent)
-            .map(Path::to_path_buf)
-            .ok_or_else(|| "could not resolve the SDK root - pass --sdk-path".to_string())?,
-    };
-    let sdk_runtime_path = sdk_root.join("crates").join("dad-local-runtime");
-    let sdk_core_path = sdk_root.join("crates").join("dad-local-core");
-    for path in [&sdk_runtime_path, &sdk_core_path] {
-        if !path.join("Cargo.toml").exists() {
-            return Err(format!(
-                "SDK crate not found at {} - pass --sdk-path pointing at the dad_sdk_local workspace",
-                path.display()
-            ));
-        }
-    }
-
     let scaffold = Scaffold {
         dir_name: dir_name.clone(),
         id,
         name: name.unwrap_or(&dir_name).to_string(),
         capabilities,
-        sdk_runtime_path: sdk_runtime_path.to_string_lossy().replace('\\', "/"),
-        sdk_core_path: sdk_core_path.to_string_lossy().replace('\\', "/"),
     };
 
     std::fs::create_dir_all(dir).map_err(|e| format!("failed to create {}: {e}", dir.display()))?;
@@ -388,7 +366,7 @@ pub fn run(
 mod tests {
     use super::*;
 
-    fn tmp_dir(tag: &str) -> PathBuf {
+    fn tmp_dir(tag: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("dad-local-init-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         dir
@@ -397,7 +375,7 @@ mod tests {
     #[test]
     fn init_generates_a_valid_compiling_shaped_addon() {
         let dir = tmp_dir("valid");
-        run(&dir, Some("org.example.my-addon"), Some("My Addon"), "direct_stream,meta,subtitle", None)
+        run(&dir, Some("org.example.my-addon"), Some("My Addon"), "direct_stream,meta,subtitle")
             .expect("init must succeed");
 
         // The generated manifest passes the FULL contract validator.
@@ -442,7 +420,7 @@ mod tests {
     #[test]
     fn init_generates_only_declared_handlers() {
         let dir = tmp_dir("subs-only");
-        run(&dir, None, None, "subtitle", None).expect("init must succeed");
+        run(&dir, None, None, "subtitle").expect("init must succeed");
         let main_rs = std::fs::read_to_string(dir.join("src").join("main.rs")).unwrap();
         assert!(main_rs.contains("GetSubtitlesHandler"));
         assert!(!main_rs.contains("GetStreamsHandler"), "undeclared handler must not be templated");
@@ -453,12 +431,12 @@ mod tests {
     #[test]
     fn init_refuses_bad_caps_and_nonempty_dirs() {
         let dir = tmp_dir("badcaps");
-        let error = run(&dir, None, None, "direct_stream,warp_drive", None).unwrap_err();
+        let error = run(&dir, None, None, "direct_stream,warp_drive").unwrap_err();
         assert!(error.contains("--caps"), "{error}");
 
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("something.txt"), "x").unwrap();
-        let error = run(&dir, None, None, "subtitle", None).unwrap_err();
+        let error = run(&dir, None, None, "subtitle").unwrap_err();
         assert!(error.contains("not empty"), "{error}");
         let _ = std::fs::remove_dir_all(&dir);
     }

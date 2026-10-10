@@ -4,7 +4,7 @@ The **Delulu Addon Development (DAD) Local SDK** - develop, build, and test
 local (native binary) addons for Delulu.
 
 ```bash
-cargo install --path crates/dad-local-cli
+cargo install --git https://github.com/delulu-org/dad-sdk-local dad-local-cli
 ```
 
 > **Local addons are native binaries.** Delulu spawns them as child
@@ -281,12 +281,11 @@ release state.
 
 Common flags: `--target <triple>` builds for a specific target,
 `--skip-clippy` bypasses the lint gate, `--skip-portability` bypasses the
-cross-target check (both loudly warned), `--sdk-path <dir>` points `init`
-at this workspace.
+cross-target check (both loudly warned).
 
-`init` writes path dependencies on `dad-local-core` and
-`dad-local-runtime`. They resolve from the CLI's own build location by
-default, or from `--sdk-path`.
+`init` writes git dependencies on `dad-local-core` and `dad-local-runtime`,
+resolved straight from this SDK's public repo and pinned to the SDK's release
+tag - no registry, no local checkout.
 
 The addon's `Cargo.toml` must carry the mandated profile - `build` and
 `test` refuse to run without it:
@@ -308,7 +307,7 @@ scaffolded `clippy.toml` denies `std::fs` reads and writes,
 `std::process::Command`, `std::env::var(_os)`, and
 `std::net::TcpStream::connect`: a local addon is a stateless resolver, so
 files, processes, environment, and raw sockets are host concerns. Only the
-addon crate is linted - path dependencies are compiled, never linted - so
+addon crate is linted - the SDK dependencies are compiled, never linted - so
 the gate can only ever fail on your code.
 
 ---
