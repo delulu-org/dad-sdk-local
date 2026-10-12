@@ -7,7 +7,7 @@ use std::path::Path;
 /// The public SDK repo that scaffolded addons depend on, straight from git -
 /// no registry, no local checkout required.
 const SDK_GIT: &str = "https://github.com/delulu-org/dad-sdk-local";
-const SDK_GIT_REF: &str = "v0.1.0";
+const SDK_GIT_REF: &str = "v0.1.1";
 
 struct Scaffold {
     dir_name: String,
