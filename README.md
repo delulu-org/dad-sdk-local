@@ -229,8 +229,8 @@ definition time is a compile error here, enforced in both directions.
 
 Each `platform_assets` entry carries `download_url` (HTTPS), `binary_name`
 (a plain filename - no separators, no `..`), `sha256` (`""` while authoring,
-64 hex chars once published), and `entry_command` (arguments Delulu appends
-when spawning, default `rpc`).
+64 hex chars once published), and `entry_command` (reserved; must be
+`rpc`, the only supported entry point).
 
 Unknown fields are rejected outright: `deny_unknown_fields` exists because a
 canonically-dropped field would escape the signature. Adding a field

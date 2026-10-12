@@ -177,3 +177,13 @@ fn per_stream_headers_never_leak_between_providers() {
     let result = validate_stream_items(&raw, Some(&[DadStreamType::Direct]));
     assert!(result.valid, "{}", result);
 }
+
+#[test]
+fn entry_command_must_be_rpc() {
+    let mut m = valid_manifest();
+    assert!(LocalAddonManifest::parse(&m).is_ok());
+    for bad in ["serve", "", "rpc --evil", " rpc"] {
+        m["platform_assets"]["windows-x64"]["entry_command"] = json!(bad);
+        assert!(LocalAddonManifest::parse(&m).is_err(), "{bad:?} must be rejected");
+    }
+}

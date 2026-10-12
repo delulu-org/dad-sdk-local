@@ -104,7 +104,7 @@ pub struct PlatformAsset {
     /// bytes — this is why there is no single top-level `sha256`.
     #[serde(default)]
     pub sha256: String,
-    /// Arguments the host appends when spawning. Optional, default `"rpc"`.
+    /// Reserved. The host always spawns with `rpc`; any other value is rejected.
     #[serde(default = "default_entry_command")]
     pub entry_command: String,
 }
@@ -330,9 +330,9 @@ pub fn validate_typed_manifest(manifest: &LocalAddonManifest) -> Validation {
                     "{at}.sha256 must be empty (authoring state) or 64 hex chars once published"
                 ));
             }
-            if asset.entry_command.trim().is_empty() {
+            if asset.entry_command != "rpc" {
                 errors.push(format!(
-                    "{at}.entry_command must be a non-empty string when set (default \"rpc\")"
+                    "{at}.entry_command must be exactly \"rpc\" (the only supported entry point)"
                 ));
             }
         }
