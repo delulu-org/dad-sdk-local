@@ -72,7 +72,7 @@ declares in its manifest:
 
 | Capability | Handler | Returns |
 |---|---|---|
-| `meta` | `getMeta` | `MetaResponse` (imdb_id, imdb_rating, trailers) or `null` |
+| `meta` | `getMeta` | `MetaResponse` (imdb_id, overall_imdb_rating, episode_imdb_ratings, trailers) or `null` |
 | `direct_stream` | `getStreams` | `Vec<StreamItem>` - `direct` (plain, or `needs_proxy` + `headers`) |
 | `torrent` | `getStreams` | `Vec<StreamItem>` - `torrent` (`info_hash` + required `file_idx`) |
 | `subtitle` | `getSubtitles` | `Vec<SubtitleItem>` (vtt, srt, ass, ssa, ttml, dfxp) |
@@ -116,9 +116,11 @@ for this addon, delivered per request and never persisted by the SDK.
 
 ### Meta responses
 
-`MetaResponse { imdb_id, imdb_rating, trailers }` fills only what TMDB does
-not already carry. `imdb_rating` must be a number, not a string. Trailers
-are HTTPS URLs in preference order - the first is the default.
+`MetaResponse { imdb_id, overall_imdb_rating, episode_imdb_ratings, trailers }` fills only what TMDB does
+not already carry. `overall_imdb_rating` must be a number between 0.0 and 10.0 inclusive, not a string.
+`episode_imdb_ratings` is an optional map of positive integer episode numbers to ratings between 0.0 and 10.0 for TV season calls.
+Trailers are HTTPS URLs in preference order - the first is the default. Gated to season level maximum:
+calling `getMeta` with an episode number is forbidden and returns `bad_request`.
 
 ### Subtitle tracks
 

@@ -87,6 +87,7 @@ pub struct ApiKey {
     /// before the handler runs.
     pub required: bool,
     /// HTTPS URL where the user signs up / generates a key.
+    #[serde(alias = "pageUrl")]
     pub page_url: String,
 }
 
@@ -96,16 +97,18 @@ pub struct ApiKey {
 pub struct PlatformAsset {
     /// HTTPS URL of the binary (every redirect hop must also be HTTPS —
     /// enforced by the host's downloader).
+    #[serde(alias = "downloadUrl")]
     pub download_url: String,
     /// Filename inside the per-version install dir; no path separators, no `..`.
+    #[serde(alias = "binaryName")]
     pub binary_name: String,
     /// SHA-256 of THIS platform's binary: `""` while authoring, 64-hex once
     /// published. Per-platform because different targets produce different
     /// bytes — this is why there is no single top-level `sha256`.
-    #[serde(default)]
+    #[serde(default, alias = "sha_256")]
     pub sha256: String,
     /// Reserved. The host always spawns with `rpc`; any other value is rejected.
-    #[serde(default = "default_entry_command")]
+    #[serde(default = "default_entry_command", alias = "entryCommand")]
     pub entry_command: String,
 }
 
@@ -129,6 +132,7 @@ pub struct LocalAddonManifest {
     #[serde(rename = "type")]
     pub addon_type: AddonType,
     /// The RPC contract this binary speaks. Must be `"2.0"`.
+    #[serde(alias = "protocolVersion")]
     pub protocol_version: String,
     /// One line for the listing shelf.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -144,10 +148,11 @@ pub struct LocalAddonManifest {
     /// in the runtime crate) and no capability may be declared twice.
     pub capabilities: Vec<DadCapability>,
     /// Optional API key gate.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "apiKey")]
     pub api_key: Option<ApiKey>,
     /// Per-platform binaries, keyed `"{os}-{arch}"` (e.g. `windows-x64`).
     /// At least one entry required.
+    #[serde(alias = "platformAssets")]
     pub platform_assets: BTreeMap<String, PlatformAsset>,
     /// ed25519 signature over [`LocalAddonManifest::canonical_payload`]:
     /// `""` while authoring, standard base64 (64 bytes) once published.

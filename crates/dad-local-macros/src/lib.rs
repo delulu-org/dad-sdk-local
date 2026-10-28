@@ -223,7 +223,7 @@ fn define_local_addon_impl(
     if has_meta {
         arms.push(quote! {
             "getMeta" => {
-                let __req = ::dad_local_runtime::parse_request_params(__params)?;
+                let __req = ::dad_local_runtime::parse_meta_request_params(__params)?;
                 ::dad_local_runtime::enforce_api_key_gate(__manifest, &__req)?;
                 let __meta = __addon.get_meta(__req).await?;
                 ::dad_local_runtime::validate_meta_or_invalid(__meta)

@@ -46,7 +46,8 @@ impl GetMetaHandler for DemoOpen {
     async fn get_meta(&self, _request: DadRequest) -> Result<Option<MetaResponse>, DadError> {
         Ok(Some(MetaResponse {
             imdb_id: Some("tt0111113".to_string()),
-            imdb_rating: Some(8.8),
+            overall_imdb_rating: Some(8.8),
+            episode_imdb_ratings: None,
             trailers: Some(vec!["https://cdn.example.com/trailer.mp4".to_string()]),
         }))
     }

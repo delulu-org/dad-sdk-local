@@ -75,8 +75,20 @@ fn meta_roundtrip() {
     );
     assert_eq!(code, 0);
     assert_eq!(response["result"]["imdb_id"], json!("tt0111113"));
-    assert_eq!(response["result"]["imdb_rating"], json!(8.8));
+    assert_eq!(response["result"]["overall_imdb_rating"], json!(8.8));
     assert_eq!(response["result"]["trailers"][0], json!("https://cdn.example.com/trailer.mp4"));
+}
+
+#[test]
+fn meta_rejects_episode_level_calls() {
+    let exe = std::env::var("CARGO_BIN_EXE_demo_open").expect("example binary built");
+    let (response, code, _) = run_addon(
+        &exe,
+        &request_line(3, "getMeta", json!({"tmdb_id": 1930, "media_type": "tv", "s": 1, "e": 2})),
+    );
+    assert_eq!(code, 0);
+    assert_eq!(response["error"]["code"], json!("bad_request"));
+    assert!(response["error"]["error_message"].as_str().unwrap().contains("Episode-level requests are forbidden on getMeta"));
 }
 
 #[test]

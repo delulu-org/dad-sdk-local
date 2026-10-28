@@ -7,7 +7,7 @@ use std::path::Path;
 /// The public SDK repo that scaffolded addons depend on, straight from git -
 /// no registry, no local checkout required.
 const SDK_GIT: &str = "https://github.com/delulu-org/dad-sdk-local";
-const SDK_GIT_REF: &str = "v0.1.1";
+const SDK_GIT_REF: &str = "v0.2.0";
 
 struct Scaffold {
     dir_name: String,
@@ -62,11 +62,13 @@ fn generate_main_rs(scaffold: &Scaffold) -> String {
         body.push_str(
             r#"impl GetMetaHandler for Addon {
     async fn get_meta(&self, _request: DadRequest) -> Result<Option<MetaResponse>, DadError> {
-        // Fill in ONLY what TMDB does not already carry: IMDb id/rating, trailers.
+        // Fill in ONLY what TMDB does not already carry: IMDb id, overall IMDb rating,
+        // season episode ratings, and trailers.
         // The first trailer URL is the default the client plays.
         Ok(Some(MetaResponse {
             imdb_id: Some("tt0111113".to_string()),
-            imdb_rating: Some(8.8),
+            overall_imdb_rating: Some(8.8),
+            episode_imdb_ratings: None,
             trailers: Some(vec!["https://cdn.example.com/trailer.mp4".to_string()]),
         }))
     }

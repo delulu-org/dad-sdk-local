@@ -275,6 +275,15 @@ pub fn parse_request_params(params: Option<Value>) -> Result<DadRequest, DadErro
     Ok(request)
 }
 
+/// Parses + semantically validates `params` for a `getMeta` request.
+/// In addition to standard request validation, episode-level calls are strictly
+/// forbidden on `getMeta` — query the season to receive all episode ratings at once.
+pub fn parse_meta_request_params(params: Option<Value>) -> Result<DadRequest, DadError> {
+    let request = parse_request_params(params)?;
+    request.validate_for_meta()?;
+    Ok(request)
+}
+
 /// The enforced api_key gate — runs BEFORE the handler, exactly like
 /// dad-sdk's enforced 401. `auth` presence is all the SDK checks; whether a
 /// PRESENT key is valid is the addon author's business.
@@ -636,5 +645,21 @@ mod tests {
         assert!(parse_request_params(Some(json!({"tmdb_id": 0, "media_type": "movie"}))).is_err());
         // camelCase params rejected (deny_unknown_fields / missing required).
         assert!(parse_request_params(Some(json!({"tmdbId": 550, "mediaType": "movie"}))).is_err());
+
+        // parse_meta_request_params accepts movie and TV season
+        let meta_movie = parse_meta_request_params(Some(json!({"tmdb_id": 550, "media_type": "movie"}))).unwrap();
+        assert_eq!(meta_movie.tmdb_id, 550);
+        assert_eq!(meta_movie.s, None);
+        assert_eq!(meta_movie.e, None);
+
+        let meta_tv_season = parse_meta_request_params(Some(json!({"tmdb_id": 1930, "media_type": "tv", "s": 2}))).unwrap();
+        assert_eq!(meta_tv_season.tmdb_id, 1930);
+        assert_eq!(meta_tv_season.s, Some(2));
+        assert_eq!(meta_tv_season.e, None);
+
+        // parse_meta_request_params strictly forbids episode calls on getMeta
+        let meta_tv_ep_err = parse_meta_request_params(Some(json!({"tmdb_id": 1930, "media_type": "tv", "s": 2, "e": 4}))).unwrap_err();
+        assert_eq!(meta_tv_ep_err.code, DadErrorCode::BadRequest);
+        assert!(meta_tv_ep_err.message.contains("Episode-level requests are forbidden on getMeta"));
     }
 }

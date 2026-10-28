@@ -109,8 +109,11 @@ pub fn run_addon_rpc(
     if let Some(season) = fixture.season {
         params["s"] = json!(season);
     }
-    if let Some(episode) = fixture.episode {
-        params["e"] = json!(episode);
+    // Episode-level requests are forbidden on getMeta: query season to receive all episode ratings
+    if method != "getMeta" {
+        if let Some(episode) = fixture.episode {
+            params["e"] = json!(episode);
+        }
     }
     if let Some(key) = auth {
         params["auth"] = json!(key);

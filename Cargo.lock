@@ -106,7 +106,7 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "dad-local-cli"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "clap",
  "dad-local-core",
@@ -118,7 +118,7 @@ dependencies = [
 
 [[package]]
 name = "dad-local-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -126,7 +126,7 @@ dependencies = [
 
 [[package]]
 name = "dad-local-macros"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "dad-local-core",
  "dad-local-toolchain",
@@ -138,7 +138,7 @@ dependencies = [
 
 [[package]]
 name = "dad-local-runtime"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "dad-local-core",
  "dad-local-macros",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "dad-local-toolchain"
-version = "0.1.1"
+version = "0.2.0"
 
 [[package]]
 name = "equivalent"

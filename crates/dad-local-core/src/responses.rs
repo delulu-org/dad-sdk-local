@@ -30,6 +30,7 @@ use crate::validation::{is_https_url, json_type_name, Validation};
 use crate::version::is_valid_version;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
 use std::fmt;
 
 // ============================================================================
@@ -90,6 +91,20 @@ impl DadRequest {
         }
         Ok(())
     }
+
+    /// Semantic validation specific to `getMeta` requests:
+    /// In addition to standard request validation, episode-level calls are strictly
+    /// forbidden on meta routes — query the season to receive all episode ratings at once.
+    pub fn validate_for_meta(&self) -> Result<(), DadError> {
+        self.validate()?;
+        if self.e.is_some() {
+            return Err(DadError::new(
+                DadErrorCode::BadRequest,
+                "Episode-level requests are forbidden on getMeta. Query the season ('s') to receive all episode ratings at once.",
+            ));
+        }
+        Ok(())
+    }
 }
 
 // ============================================================================
@@ -134,10 +149,10 @@ pub struct StreamItem {
     // ── direct identity ────────────────────────────────────────────────────
     /// Playable video URL (MP4/HLS .m3u8), HTTPS only. Direct-only; FORBIDDEN
     /// on torrents (a torrent's identity is its `info_hash`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "streamUrl", skip_serializing_if = "Option::is_none")]
     pub stream_url: Option<String>,
     /// `true` marks a stream the HOST must proxy (with `headers`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "needsProxy", skip_serializing_if = "Option::is_none")]
     pub needs_proxy: Option<bool>,
     /// The exact headers the host's proxy must inject. Required (non-empty)
     /// when `needs_proxy` is `true`; forbidden otherwise.
@@ -146,11 +161,11 @@ pub struct StreamItem {
 
     // ── torrent identity ───────────────────────────────────────────────────
     /// BTIH info hash: 40 hex chars (v1) or 64 hex (v2). Torrent-only.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "infoHash", skip_serializing_if = "Option::is_none")]
     pub info_hash: Option<String>,
     /// Zero-based file index inside the torrent; REQUIRED for torrents,
     /// `0` for single-file. Direct-only presence is an error.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "fileIdx", skip_serializing_if = "Option::is_none")]
     pub file_idx: Option<u64>,
     /// Reported seeders for ranking.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -163,7 +178,7 @@ pub struct StreamItem {
     /// Container hint so the player picks an engine without sniffing the URL
     /// ("hls", "mp4", "mpd", "mkv", "webm", "other", ...). Free-form: the
     /// client drops what it cannot play.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "mediaFormat", skip_serializing_if = "Option::is_none")]
     pub media_format: Option<String>,
     /// e.g. "2160p", "1080p", "720p", "480p".
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -172,19 +187,20 @@ pub struct StreamItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub codec: Option<String>,
     /// e.g. "Dolby Vision", "HDR10+", "HDR", "SDR".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "hdrFormat", skip_serializing_if = "Option::is_none")]
     pub hdr_format: Option<String>,
     /// e.g. "Dolby Atmos", "DTS-HD", "DD+", "AAC".
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "audioFormat", skip_serializing_if = "Option::is_none")]
     pub audio_format: Option<String>,
     /// REQUIRED. Languages in this file — display-only, so the shelf can say
     /// "2 audio tracks" before the user picks. A muxed English+Hindi file is
     /// ONE item listing both; never emit the same `stream_url` twice. Use
     /// `[]` when the languages are unknown — `null`/omitted is rejected, so
     /// client code maps over it directly.
+    #[serde(alias = "audioLanguages")]
     pub audio_languages: Vec<String>,
     /// File size in gigabytes (e.g. 2.4).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "sizeGb", skip_serializing_if = "Option::is_none")]
     pub size_gb: Option<f64>,
     /// Subtitles bundled with THIS stream — validated by the same rules as a
     /// standalone `/subtitles` response.
@@ -246,14 +262,16 @@ pub struct DirectStreamItem {
     /// Display title.
     pub title: String,
     /// Playable HTTPS URL.
+    #[serde(alias = "streamUrl")]
     pub stream_url: String,
     /// Container hint.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "mediaFormat", skip_serializing_if = "Option::is_none")]
     pub media_format: Option<String>,
     /// e.g. "1080p".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolution: Option<String>,
     /// Required languages list (`[]` = unknown).
+    #[serde(alias = "audioLanguages")]
     pub audio_languages: Vec<String>,
     /// Subtitles riding on this stream.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -267,16 +285,18 @@ pub struct ProxiedStreamItem {
     /// Display title.
     pub title: String,
     /// HTTPS URL the proxy fetches on the player's behalf.
+    #[serde(alias = "streamUrl")]
     pub stream_url: String,
     /// The exact headers to inject (Referer, User-Agent, Origin, Cookie...).
     pub headers: std::collections::BTreeMap<String, String>,
     /// Container hint.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "mediaFormat", skip_serializing_if = "Option::is_none")]
     pub media_format: Option<String>,
     /// e.g. "1080p".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolution: Option<String>,
     /// Required languages list (`[]` = unknown).
+    #[serde(alias = "audioLanguages")]
     pub audio_languages: Vec<String>,
     /// Subtitles riding on this stream.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -290,8 +310,10 @@ pub struct TorrentStreamItem {
     /// Display title / release name.
     pub title: String,
     /// 40-hex (v1) or 64-hex (v2) BTIH — the torrent's identity.
+    #[serde(alias = "infoHash")]
     pub info_hash: String,
     /// Zero-based file index; `0` for single-file.
+    #[serde(alias = "fileIdx")]
     pub file_idx: u64,
     /// Reported seeders for ranking.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -300,6 +322,7 @@ pub struct TorrentStreamItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trackers: Option<Vec<String>>,
     /// Required languages list (`[]` = unknown).
+    #[serde(alias = "audioLanguages")]
     pub audio_languages: Vec<String>,
     /// Subtitles riding on this stream.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -364,13 +387,18 @@ impl From<TorrentStreamItem> for StreamItem {
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 pub struct MetaResponse {
     /// Canonical IMDb id (e.g. "tt0137523").
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, alias = "imdbId", skip_serializing_if = "Option::is_none")]
     pub imdb_id: Option<String>,
-    /// Canonical IMDb community rating as a NUMBER (e.g. 8.8) — an addon MUST
-    /// normalize (`parse`) any string rating before returning. `None` when
-    /// unknown.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub imdb_rating: Option<f64>,
+    /// Title-level aggregate IMDb community rating as a NUMBER between 0.0 and 10.0 (e.g. 8.8) —
+    /// an addon MUST normalize (`parse`) any string rating before returning. `None` when unknown.
+    #[serde(default, alias = "overallImdbRating", skip_serializing_if = "Option::is_none")]
+    pub overall_imdb_rating: Option<f64>,
+    /// Episode IMDb community ratings for the requested season.
+    /// Key: Episode number as positive integer (>= 1).
+    /// Value: IMDb community rating as a NUMBER between 0.0 and 10.0 inclusive.
+    /// `None` when unknown.
+    #[serde(default, alias = "episodeImdbRatings", skip_serializing_if = "Option::is_none")]
+    pub episode_imdb_ratings: Option<BTreeMap<u32, f64>>,
     /// Official trailer URLs, ordered by preference — the FIRST entry is the
     /// default. HTTPS only. Empty/absent = no trailer. One adaptive URL per
     /// title; quality selection is the client player's job.
@@ -411,6 +439,7 @@ pub struct SubtitleItem {
     /// Track URL.
     pub url: String,
     /// ISO-ish code (e.g. "en", "es", "bn", "hi").
+    #[serde(alias = "langCode")]
     pub lang_code: String,
     /// Display language name (e.g. "English").
     pub language: String,
@@ -429,7 +458,14 @@ pub struct SubtitleItem {
 
 /// Fields that only exist for the torrent engine. Forbidden on `direct`
 /// items, checked by PRESENCE (`null` counts as present).
-const TORRENT_ONLY_FIELDS: [&str; 4] = ["info_hash", "file_idx", "trackers", "seeders"];
+const TORRENT_ONLY_FIELDS: [&str; 6] = [
+    "info_hash",
+    "infoHash",
+    "file_idx",
+    "fileIdx",
+    "trackers",
+    "seeders",
+];
 
 fn is_info_hash(value: &str) -> bool {
     (value.len() == 40 || value.len() == 64) && value.chars().all(|c| c.is_ascii_hexdigit())
@@ -478,7 +514,8 @@ pub fn validate_stream_item(item: &Value) -> Validation {
     // Identity is per-type; each type forbids the other's fields BY PRESENCE.
     match item_type {
         DadStreamType::Direct => {
-            match obj.get("stream_url") {
+            let stream_url_val = obj.get("stream_url").or_else(|| obj.get("streamUrl"));
+            match stream_url_val {
                 Some(Value::String(url)) if !url.trim().is_empty() => {
                     if !is_https_url(url) {
                         errors.push(format!(
@@ -500,7 +537,8 @@ pub fn validate_stream_item(item: &Value) -> Validation {
 
             // Proxy semantics. Presence-strict: `headers: null` is a value
             // the addon chose to send for a documented-inapplicable field.
-            let needs_proxy_true = obj.get("needs_proxy") == Some(&Value::Bool(true));
+            let needs_proxy_true = obj.get("needs_proxy") == Some(&Value::Bool(true))
+                || obj.get("needsProxy") == Some(&Value::Bool(true));
             if needs_proxy_true {
                 match obj.get("headers") {
                     Some(Value::Object(headers)) if !headers.is_empty() => {
@@ -525,7 +563,7 @@ pub fn validate_stream_item(item: &Value) -> Validation {
             }
         }
         DadStreamType::Torrent => {
-            if obj.contains_key("stream_url") {
+            if obj.contains_key("stream_url") || obj.contains_key("streamUrl") {
                 errors.push(
                     "Torrent items must NOT carry 'stream_url' - a torrent has no playable \
                      URL; the peer swarm is the source. Send 'info_hash' (+ 'file_idx') instead."
@@ -539,7 +577,7 @@ pub fn validate_stream_item(item: &Value) -> Validation {
                         .to_string(),
                 );
             }
-            if obj.contains_key("needs_proxy") {
+            if obj.contains_key("needs_proxy") || obj.contains_key("needsProxy") {
                 errors.push(
                     "Torrent items must not set 'needs_proxy' (not even false) - torrents \
                      go to the torrent engine, not the proxy"
@@ -549,7 +587,8 @@ pub fn validate_stream_item(item: &Value) -> Validation {
 
             // The strictest check in the whole stream contract: a wrong hash
             // downloads a completely different torrent.
-            match obj.get("info_hash") {
+            let info_hash_val = obj.get("info_hash").or_else(|| obj.get("infoHash"));
+            match info_hash_val {
                 Some(Value::String(hash)) if !hash.trim().is_empty() => {
                     if !is_info_hash(hash) {
                         errors.push(format!(
@@ -565,7 +604,8 @@ pub fn validate_stream_item(item: &Value) -> Validation {
                 ),
             }
 
-            match obj.get("file_idx") {
+            let file_idx_val = obj.get("file_idx").or_else(|| obj.get("fileIdx"));
+            match file_idx_val {
                 Some(Value::Number(n)) if n.is_u64() => {}
                 Some(other) => errors.push(format!(
                     "Torrent 'file_idx' must be a non-negative integer (use 0 for a \
@@ -613,7 +653,8 @@ pub fn validate_stream_item(item: &Value) -> Validation {
     }
 
     // audio_languages: REQUIRED everywhere (see StreamItem docs).
-    match obj.get("audio_languages") {
+    let audio_languages_val = obj.get("audio_languages").or_else(|| obj.get("audioLanguages"));
+    match audio_languages_val {
         Some(Value::Array(langs)) => {
             for (i, lang) in langs.iter().enumerate() {
                 let ok = lang.as_str().map(|l| !l.trim().is_empty()).unwrap_or(false);
@@ -638,14 +679,20 @@ pub fn validate_stream_item(item: &Value) -> Validation {
     }
 
     // Informational hints: well-formed if present, never whitelisted.
-    for field in ["media_format", "resolution", "codec", "hdr_format", "audio_format"] {
-        if let Some(v) = obj.get(field) {
+    for (snake, camel) in [
+        ("media_format", "mediaFormat"),
+        ("resolution", "resolution"),
+        ("codec", "codec"),
+        ("hdr_format", "hdrFormat"),
+        ("audio_format", "audioFormat"),
+    ] {
+        if let Some(v) = obj.get(snake).or_else(|| obj.get(camel)) {
             if !v.is_null() && !v.is_string() {
-                errors.push(format!("'{field}' must be a string if present (got {})", json_type_name(v)));
+                errors.push(format!("'{snake}' must be a string if present (got {})", json_type_name(v)));
             }
         }
     }
-    if let Some(v) = obj.get("size_gb") {
+    if let Some(v) = obj.get("size_gb").or_else(|| obj.get("sizeGb")) {
         if !v.is_null() && !v.is_number() {
             errors.push(format!("'size_gb' must be a number if present (got {})", json_type_name(v)));
         }
@@ -739,19 +786,77 @@ pub fn validate_meta_response(raw: &Value) -> Validation {
     };
     let mut errors: Vec<String> = Vec::new();
 
-    match obj.get("imdb_id") {
+    match obj.get("imdb_id").or_else(|| obj.get("imdbId")) {
         None | Some(Value::Null) => {}
         Some(Value::String(_)) => {}
         Some(other) => errors.push(format!("'imdb_id' must be a string - got {}", json_type_name(other))),
     }
-    match obj.get("imdb_rating") {
-        None | Some(Value::Null) => {}
-        Some(Value::Number(n)) if n.as_f64().map(|f| f.is_finite()).unwrap_or(false) => {}
-        Some(_) => errors.push(
-            "'imdb_rating' must be a number - normalize string ratings (e.g. parse) before \
-             returning"
+
+    // Reject deprecated 'imdb_rating' with clear migration guidance
+    if obj.contains_key("imdb_rating") || obj.contains_key("imdbRating") {
+        errors.push(
+            "'imdb_rating' has been renamed to 'overall_imdb_rating' to explicitly represent the title-level IMDb rating."
                 .to_string(),
-        ),
+        );
+    }
+
+    // Enforce overall_imdb_rating: positive float 0.0 to 10.0
+    match obj.get("overall_imdb_rating").or_else(|| obj.get("overallImdbRating")) {
+        None | Some(Value::Null) => {}
+        Some(Value::Number(n)) => match n.as_f64() {
+            Some(f) if f.is_finite() && (0.0..=10.0).contains(&f) => {}
+            Some(f) if f.is_finite() => errors.push(format!(
+                "'overall_imdb_rating' must be between 0.0 and 10.0 inclusive (received {f})"
+            )),
+            _ => errors.push(
+                "'overall_imdb_rating' must be a number - normalize string ratings (e.g. parse) before returning"
+                    .to_string(),
+            ),
+        },
+        Some(other) => errors.push(format!(
+            "'overall_imdb_rating' must be a number - normalize string ratings (e.g. parse) before returning - got {}",
+            json_type_name(other)
+        )),
+    }
+
+    // Enforce episode_imdb_ratings: map of positive integer -> float 0.0 to 10.0
+    match obj.get("episode_imdb_ratings").or_else(|| obj.get("episodeImdbRatings")) {
+        None | Some(Value::Null) => {}
+        Some(Value::Object(map)) => {
+            for (ep_key, rating_val) in map {
+                // Key must be a positive integer >= 1 without leading zeroes or whitespace
+                let is_valid_key = ep_key.chars().all(|c| c.is_ascii_digit())
+                    && !ep_key.starts_with('0')
+                    && !ep_key.is_empty()
+                    && ep_key.parse::<u32>().map(|n| n >= 1).unwrap_or(false);
+
+                if !is_valid_key {
+                    errors.push(format!(
+                        "'episode_imdb_ratings' key '{ep_key}' is invalid - episode numbers must be positive integers >= 1"
+                    ));
+                }
+
+                match rating_val {
+                    Value::Number(n) => match n.as_f64() {
+                        Some(f) if f.is_finite() && (0.0..=10.0).contains(&f) => {}
+                        Some(f) if f.is_finite() => errors.push(format!(
+                            "'episode_imdb_ratings' for episode {ep_key} must be between 0.0 and 10.0 inclusive (received {f})"
+                        )),
+                        _ => errors.push(format!(
+                            "'episode_imdb_ratings' for episode {ep_key} must be a number - normalize string ratings (e.g. parse) before returning"
+                        )),
+                    },
+                    other => errors.push(format!(
+                        "'episode_imdb_ratings' for episode {ep_key} must be a number - got {}",
+                        json_type_name(other)
+                    )),
+                }
+            }
+        }
+        Some(other) => errors.push(format!(
+            "'episode_imdb_ratings' must be an object map of episode numbers to ratings (e.g. {{ 1: 9.0, 2: 8.7 }}) or null - got {}",
+            json_type_name(other)
+        )),
     }
     match obj.get("trailers") {
         None | Some(Value::Null) => {}
@@ -792,11 +897,15 @@ pub fn validate_subtitle_items(items: &Value) -> Validation {
             errors.push(format!("{at}: must be an object - got {}", json_type_name(item)));
             continue;
         };
-        for field in ["id", "url", "lang_code", "language", "title"] {
+        for field in ["id", "url", "language", "title"] {
             match obj.get(field) {
                 Some(Value::String(s)) if !s.is_empty() => {}
                 _ => errors.push(format!("{at}: missing or invalid '{field}' string")),
             }
+        }
+        match obj.get("lang_code").or_else(|| obj.get("langCode")) {
+            Some(Value::String(s)) if !s.is_empty() => {}
+            _ => errors.push(format!("{at}: missing or invalid 'lang_code' string")),
         }
         match obj.get("format") {
             Some(Value::String(format)) if DAD_SUBTITLE_FORMATS.contains(&format.as_str()) => {}
@@ -854,6 +963,7 @@ pub struct HealthPong {
     /// Always `true` when the addon is alive and responsive.
     pub ok: bool,
     /// Canonical reverse-DNS identifier (e.g. `"dev.fearless.rosseta"`).
+    #[serde(alias = "addonId")]
     pub addon_id: String,
     /// Human-readable display name.
     pub name: String,
@@ -890,7 +1000,7 @@ pub fn validate_health_pong(raw: &Value) -> Validation {
 
     // Check unknown fields
     for key in obj.keys() {
-        if !matches!(key.as_str(), "ok" | "addon_id" | "name" | "version") {
+        if !matches!(key.as_str(), "ok" | "addon_id" | "addonId" | "name" | "version") {
             errors.push(format!("Unknown field in health pong: '{key}'"));
         }
     }
@@ -902,7 +1012,8 @@ pub fn validate_health_pong(raw: &Value) -> Validation {
         None => errors.push("Missing 'ok' field in health pong".to_string()),
     }
 
-    match obj.get("addon_id") {
+    let addon_id_val = obj.get("addon_id").or_else(|| obj.get("addonId"));
+    match addon_id_val {
         Some(Value::String(id)) if !id.trim().is_empty() => {
             if !is_reverse_dns_id(id) {
                 errors.push(format!(
@@ -1136,18 +1247,129 @@ mod tests {
     fn meta_contract() {
         assert!(validate_meta_response(&json!(null)).valid);
         assert!(validate_meta_response(&json!({})).valid);
+
+        // Valid overall_imdb_rating + trailers
         let good = json!({
             "imdb_id": "tt0137523",
-            "imdb_rating": 8.8,
+            "overall_imdb_rating": 8.8,
             "trailers": ["https://example.com/t.mp4"]
         });
         assert!(validate_meta_response(&good).valid);
 
-        let string_rating = json!({ "imdb_rating": "8.8" });
+        // Boundary checks for overall_imdb_rating: 0.0 and 10.0
+        assert!(validate_meta_response(&json!({ "overall_imdb_rating": 0.0 })).valid);
+        assert!(validate_meta_response(&json!({ "overall_imdb_rating": 10.0 })).valid);
+
+        // Out of range overall_imdb_rating
+        let under = json!({ "overall_imdb_rating": -0.1 });
+        let res_under = validate_meta_response(&under);
+        assert!(!res_under.valid);
+        assert!(res_under.errors[0].contains("between 0.0 and 10.0 inclusive"));
+
+        let over = json!({ "overall_imdb_rating": 10.1 });
+        let res_over = validate_meta_response(&over);
+        assert!(!res_over.valid);
+        assert!(res_over.errors[0].contains("between 0.0 and 10.0 inclusive"));
+
+        // Type violations for overall_imdb_rating
+        let string_rating = json!({ "overall_imdb_rating": "8.8" });
         assert!(!validate_meta_response(&string_rating).valid);
 
+        // Deprecated imdb_rating must be rejected with migration guidance
+        let deprecated = json!({ "imdb_rating": 8.8 });
+        let res_dep = validate_meta_response(&deprecated);
+        assert!(!res_dep.valid);
+        assert!(res_dep.errors[0].contains("'imdb_rating' has been renamed to 'overall_imdb_rating'"));
+
+        // Valid episode_imdb_ratings map
+        let with_episodes = json!({
+            "overall_imdb_rating": 9.2,
+            "episode_imdb_ratings": {
+                "1": 8.5,
+                "2": 9.0,
+                "10": 10.0,
+                "15": 0.0
+            }
+        });
+        assert!(validate_meta_response(&with_episodes).valid);
+
+        // episode_imdb_ratings non-object/array rejection
+        let ep_array = json!({ "episode_imdb_ratings": [8.5, 9.0] });
+        let res_ep_arr = validate_meta_response(&ep_array);
+        assert!(!res_ep_arr.valid);
+        assert!(res_ep_arr.errors[0].contains("'episode_imdb_ratings' must be an object map"));
+
+        // episode_imdb_ratings invalid keys (0, negative, leading zero, whitespace, non-integer)
+        for bad_key in ["0", "-1", "01", " 1 ", "1.5", "ep1"] {
+            let bad_ep = json!({ "episode_imdb_ratings": { bad_key: 8.5 } });
+            let res_bad_ep = validate_meta_response(&bad_ep);
+            assert!(!res_bad_ep.valid, "key '{bad_key}' should be rejected");
+            assert!(res_bad_ep.errors[0].contains("episode numbers must be positive integers >= 1"));
+        }
+
+        // episode_imdb_ratings invalid values (string, > 10.0, < 0.0)
+        let ep_str_val = json!({ "episode_imdb_ratings": { "1": "8.5" } });
+        assert!(!validate_meta_response(&ep_str_val).valid);
+
+        let ep_over_val = json!({ "episode_imdb_ratings": { "1": 10.5 } });
+        let res_ep_over = validate_meta_response(&ep_over_val);
+        assert!(!res_ep_over.valid);
+        assert!(res_ep_over.errors[0].contains("between 0.0 and 10.0 inclusive"));
+
+        let ep_under_val = json!({ "episode_imdb_ratings": { "1": -0.5 } });
+        let res_ep_under = validate_meta_response(&ep_under_val);
+        assert!(!res_ep_under.valid);
+        assert!(res_ep_under.errors[0].contains("between 0.0 and 10.0 inclusive"));
+
+        // Trailers validation
         let http_trailer = json!({ "trailers": ["http://example.com/t.mp4"] });
         assert!(!validate_meta_response(&http_trailer).valid);
+
+        // MetaResponse typed roundtrip test
+        let mut ep_map = BTreeMap::new();
+        ep_map.insert(1, 8.5);
+        ep_map.insert(2, 9.1);
+        let typed_meta = MetaResponse {
+            imdb_id: Some("tt0137523".to_string()),
+            overall_imdb_rating: Some(8.8),
+            episode_imdb_ratings: Some(ep_map),
+            trailers: Some(vec!["https://example.com/t.mp4".to_string()]),
+        };
+        let serialized = serde_json::to_value(&typed_meta).unwrap();
+        assert_eq!(serialized["overall_imdb_rating"], json!(8.8));
+        assert_eq!(serialized["episode_imdb_ratings"]["1"], json!(8.5));
+        assert_eq!(serialized["episode_imdb_ratings"]["2"], json!(9.1));
+        assert!(validate_meta_response(&serialized).valid);
+
+        // DadRequest validate_for_meta tests
+        let movie_req = DadRequest {
+            tmdb_id: 550,
+            media_type: MediaType::Movie,
+            s: None,
+            e: None,
+            auth: None,
+        };
+        assert!(movie_req.validate_for_meta().is_ok());
+
+        let season_tv_req = DadRequest {
+            tmdb_id: 1930,
+            media_type: MediaType::Tv,
+            s: Some(1),
+            e: None,
+            auth: None,
+        };
+        assert!(season_tv_req.validate_for_meta().is_ok());
+
+        let episode_tv_req = DadRequest {
+            tmdb_id: 1930,
+            media_type: MediaType::Tv,
+            s: Some(1),
+            e: Some(1),
+            auth: None,
+        };
+        let err = episode_tv_req.validate_for_meta().unwrap_err();
+        assert_eq!(err.code, DadErrorCode::BadRequest);
+        assert!(err.message.contains("Episode-level requests are forbidden on getMeta"));
     }
 
     #[test]
